@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Plaid Access Token</title>
+    <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .description {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #0066ff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        button:hover {
+            background: #0052cc;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f0f7ff;
+            border-left: 4px solid #0066ff;
+            border-radius: 4px;
+            display: none;
+        }
+        .result.show {
+            display: block;
+        }
+        .result h3 {
+            margin-top: 0;
+            color: #0066ff;
+        }
+        .token-display {
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin: 10px 0;
+        }
+        .copy-button {
+            background: #28a745;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+        .copy-button:hover {
+            background: #218838;
+        }
+        .error {
+            background: #fff0f0;
+            border-left-color: #dc3545;
+        }
+        .error h3 {
+            color: #dc3545;
+        }
+        .info {
+            background: #fff9e6;
+            padding: 15px;
+            border-left: 4px solid #ffc107;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Get Your Plaid Access Token</h1>
+        <p class="description">
+            This tool helps you link your bank account and get an access token for the n8n workflow.
+            You'll need your Plaid API credentials from the <a href="https://dashboard.plaid.com/team/keys" target="_blank">Plaid Dashboard</a>.
+        </p>
+
+        <div class="info">
+            <strong>⚠️ Important:</strong> This page runs entirely in your browser. Your credentials are never sent to any server except Plaid's API.
+            Keep your access token secure and never share it publicly.
+        </div>
+
+        <form id="credentialsForm">
+            <div class="form-group">
+                <label for="clientId">Plaid Client ID</label>
+                <input type="text" id="clientId" placeholder="Enter your Plaid client_id" required>
+            </div>
+
+            <div class="form-group">
+                <label for="secret">Plaid Secret</label>
+                <input type="password" id="secret" placeholder="Enter your Plaid secret" required>
+            </div>
+
+            <div class="form-group">
+                <label for="environment">Environment</label>
+                <select id="environment" required>
+                    <option value="sandbox">Sandbox (Testing with fake banks)</option>
+                    <option value="development">Development (Real banks, testing)</option>
+                    <option value="production">Production (Real banks, live)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="products">Products (comma-separated)</label>
+                <input type="text" id="products" value="transactions" placeholder="transactions, auth, identity">
+                <small style="color: #666;">Default: transactions</small>
+            </div>
+
+            <button type="submit">Link Bank Account</button>
+        </form>
+
+        <div id="result" class="result">
+            <h3>✅ Success!</h3>
+            <p><strong>Access Token:</strong></p>
+            <div class="token-display" id="accessToken"></div>
+            <button class="copy-button" onclick="copyToken()">Copy to Clipboard</button>
+
+            <p style="margin-top: 20px;"><strong>Account Information:</strong></p>
+            <div class="token-display" id="accountInfo"></div>
+
+            <p style="margin-top: 20px; font-size: 14px; color: #666;">
+                Save this token in your .env file as <code>PLAID_ACCESS_TOKEN</code>
+            </p>
+        </div>
+
+        <div id="error" class="result error">
+            <h3>❌ Error</h3>
+            <p id="errorMessage"></p>
+        </div>
+    </div>
+
+    <script>
+        let accessToken = '';
+
+        document.getElementById('credentialsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const clientId = document.getElementById('clientId').value.trim();
+            const secret = document.getElementById('secret').value.trim();
+            const environment = document.getElementById('environment').value;
+            const products = document.getElementById('products').value.split(',').map(p => p.trim());
+
+            try {
+                // Step 1: Create a link token
+                const linkTokenResponse = await createLinkToken(clientId, secret, environment, products);
+
+                if (linkTokenResponse.error) {
+                    showError(linkTokenResponse.error.message);
+                    return;
+                }
+
+                // Step 2: Initialize Plaid Link
+                const handler = Plaid.create({
+                    token: linkTokenResponse.link_token,
+                    onSuccess: async (public_token, metadata) => {
+                        try {
+                            // Step 3: Exchange public token for access token
+                            const accessTokenResponse = await exchangePublicToken(
+                                clientId,
+                                secret,
+                                environment,
+                                public_token
+                            );
+
+                            if (accessTokenResponse.error) {
+                                showError(accessTokenResponse.error.message);
+                                return;
+                            }
+
+                            accessToken = accessTokenResponse.access_token;
+                            showSuccess(accessToken, metadata);
+                        } catch (error) {
+                            showError('Failed to exchange token: ' + error.message);
+                        }
+                    },
+                    onExit: (err, metadata) => {
+                        if (err) {
+                            showError('Plaid Link was closed: ' + err.message);
+                        }
+                    },
+                });
+
+                handler.open();
+            } catch (error) {
+                showError('Failed to create link token: ' + error.message);
+            }
+        });
+
+        async function createLinkToken(clientId, secret, environment, products) {
+            const url = `https://${environment}.plaid.com/link/token/create`;
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    client_id: clientId,
+                    secret: secret,
+                    user: {
+                        client_user_id: 'user-' + Date.now(),
+                    },
+                    client_name: 'n8n Plaid Integration',
+                    products: products,
+                    country_codes: ['US'],
+                    language: 'en',
+                }),
+            });
+
+            return await response.json();
+        }
+
+        async function exchangePublicToken(clientId, secret, environment, publicToken) {
+            const url = `https://${environment}.plaid.com/item/public_token/exchange`;
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    client_id: clientId,
+                    secret: secret,
+                    public_token: publicToken,
+                }),
+            });
+
+            return await response.json();
+        }
+
+        function showSuccess(token, metadata) {
+            document.getElementById('result').classList.add('show');
+            document.getElementById('error').classList.remove('show');
+            document.getElementById('accessToken').textContent = token;
+
+            const accountInfo = `
+Institution: ${metadata.institution.name}
+Account ID: ${metadata.account_id || 'N/A'}
+Account Name: ${metadata.account.name || 'N/A'}
+Account Type: ${metadata.account.type || 'N/A'}
+            `.trim();
+
+            document.getElementById('accountInfo').textContent = accountInfo;
+        }
+
+        function showError(message) {
+            document.getElementById('error').classList.add('show');
+            document.getElementById('result').classList.remove('show');
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        function copyToken() {
+            navigator.clipboard.writeText(accessToken).then(() => {
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>

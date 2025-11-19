@@ -1,0 +1,34 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Credentials and secrets
+credentials.json
+secrets/
+*.pem
+*.key
+
+# n8n data
+.n8n/
+n8n-data/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node modules (if you add any scripts)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Logs
+*.log
+logs/

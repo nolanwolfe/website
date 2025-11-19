@@ -1,0 +1,263 @@
+{
+  "name": "Plaid Bank Transactions to Google Sheets",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 0 * * *"
+            }
+          ]
+        }
+      },
+      "id": "8c0b3e9a-7b45-4d1e-9c82-5f3e6d8a1b2c",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        250,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "Runs daily at midnight to fetch yesterday's transactions"
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "plaidApi",
+        "method": "POST",
+        "url": "https://{{ $credentials.environment === 'sandbox' ? 'sandbox' : $credentials.environment === 'development' ? 'development' : 'production' }}.plaid.com/transactions/sync",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "client_id",
+              "value": "={{ $credentials.clientId }}"
+            },
+            {
+              "name": "secret",
+              "value": "={{ $credentials.secret }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $credentials.accessToken }}"
+            },
+            {
+              "name": "count",
+              "value": "500"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a3d4e5f6-8b9c-4d1e-2f3a-4b5c6d7e8f9a",
+      "name": "Get Plaid Transactions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        470,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "Fetches transactions from Plaid API using sync endpoint"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and format transaction data from Plaid response\nconst items = [];\n\nif ($input.item.json.added && $input.item.json.added.length > 0) {\n  for (const transaction of $input.item.json.added) {\n    items.push({\n      date: transaction.date,\n      description: transaction.name,\n      merchant: transaction.merchant_name || transaction.name,\n      amount: transaction.amount,\n      category: transaction.category ? transaction.category.join(' > ') : 'Uncategorized',\n      account_id: transaction.account_id,\n      transaction_id: transaction.transaction_id,\n      pending: transaction.pending,\n      payment_channel: transaction.payment_channel,\n      iso_currency_code: transaction.iso_currency_code || 'USD'\n    });\n  }\n}\n\nif ($input.item.json.modified && $input.item.json.modified.length > 0) {\n  for (const transaction of $input.item.json.modified) {\n    items.push({\n      date: transaction.date,\n      description: transaction.name,\n      merchant: transaction.merchant_name || transaction.name,\n      amount: transaction.amount,\n      category: transaction.category ? transaction.category.join(' > ') : 'Uncategorized',\n      account_id: transaction.account_id,\n      transaction_id: transaction.transaction_id,\n      pending: transaction.pending,\n      payment_channel: transaction.payment_channel,\n      iso_currency_code: transaction.iso_currency_code || 'USD',\n      modified: true\n    });\n  }\n}\n\nreturn items;"
+      },
+      "id": "b4c5d6e7-9a0b-4c1d-3e4f-5a6b7c8d9e0f",
+      "name": "Format Transaction Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        690,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "Transforms Plaid API response into spreadsheet-friendly format"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Transactions",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $json.date }}",
+            "description": "={{ $json.description }}",
+            "merchant": "={{ $json.merchant }}",
+            "amount": "={{ $json.amount }}",
+            "category": "={{ $json.category }}",
+            "account_id": "={{ $json.account_id }}",
+            "transaction_id": "={{ $json.transaction_id }}",
+            "pending": "={{ $json.pending }}",
+            "payment_channel": "={{ $json.payment_channel }}",
+            "currency": "={{ $json.iso_currency_code }}"
+          }
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED",
+          "useAppend": false
+        }
+      },
+      "id": "c5d6e7f8-0a1b-4c2d-4e5f-6a7b8c9d0e1f",
+      "name": "Add to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        910,
+        300
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets account"
+        }
+      },
+      "notesInFlow": true,
+      "notes": "Appends formatted transactions to Google Sheets"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+              "leftValue": "={{ $json.added?.length || 0 }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "d6e7f8a9-1b2c-4d3e-5f6a-7b8c9d0e1f2a",
+      "name": "Check for New Transactions",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        690,
+        480
+      ],
+      "notesInFlow": true,
+      "notes": "Only proceed if there are new transactions"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "multiplex",
+        "options": {}
+      },
+      "id": "e7f8a9b0-2c3d-4e5f-6a7b-8c9d0e1f2a3b",
+      "name": "Merge Data",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        470,
+        480
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Plaid Transactions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Plaid Transactions": {
+      "main": [
+        [
+          {
+            "node": "Format Transaction Data",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Transaction Data": {
+      "main": [
+        [
+          {
+            "node": "Add to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Data": {
+      "main": [
+        [
+          {
+            "node": "Check for New Transactions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for New Transactions": {
+      "main": [
+        [
+          {
+            "node": "Format Transaction Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "instanceId": "plaid-bank-transaction-sync"
+  },
+  "id": "1",
+  "tags": []
+}
