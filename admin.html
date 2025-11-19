@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Portfolio Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .section {
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #555;
+            font-weight: 600;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .status-message {
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .photo-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .photo-item {
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            padding: 0.5rem;
+            position: relative;
+        }
+
+        .photo-item img {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 3px;
+        }
+
+        .photo-item-info {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .photo-item-title {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .photo-item-category {
+            color: #7f8c8d;
+            font-size: 0.8rem;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            background: rgba(231, 76, 60, 0.9);
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            line-height: 1;
+            transition: background 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            background: #c0392b;
+        }
+
+        .upload-form {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 5px;
+            margin-top: 1rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .lightroom-sync {
+            background: #e8f4f8;
+            padding: 1.5rem;
+            border-radius: 5px;
+            border: 2px solid #3498db;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1rem;
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <a href="index.html" class="back-link">← Back to Portfolio</a>
+        <h1>Portfolio Admin Panel</h1>
+
+        <!-- Statistics -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalPhotos">0</div>
+                <div class="stat-label">Total Photos</div>
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <div class="stat-number" id="totalCategories">4</div>
+                <div class="stat-label">Categories</div>
+            </div>
+        </div>
+
+        <!-- Lightroom Sync Section -->
+        <div class="section">
+            <h2>Adobe Lightroom Sync</h2>
+            <div id="lightroomStatus" class="status-message"></div>
+            <div class="lightroom-sync">
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="password" id="apiKey" placeholder="Enter your Lightroom API key">
+                </div>
+                <div class="form-group">
+                    <label>Client ID</label>
+                    <input type="text" id="clientId" placeholder="Enter your Client ID">
+                </div>
+                <div class="form-group">
+                    <label>Client Secret</label>
+                    <input type="password" id="clientSecret" placeholder="Enter your Client Secret">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Catalog ID</label>
+                        <input type="text" id="catalogId" placeholder="Your catalog ID">
+                    </div>
+                    <div class="form-group">
+                        <label>Album ID</label>
+                        <input type="text" id="albumId" placeholder="Album ID to sync">
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="syncFromLightroom()">Sync Photos from Lightroom</button>
+            </div>
+        </div>
+
+        <!-- Manual Upload Section -->
+        <div class="section">
+            <h2>Manual Photo Upload</h2>
+            <div id="uploadStatus" class="status-message"></div>
+            <div class="upload-form">
+                <div class="form-group">
+                    <label>Photo Title</label>
+                    <input type="text" id="photoTitle" placeholder="Enter photo title">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="photoCategory">
+                            <option value="portrait">Portrait</option>
+                            <option value="landscape">Landscape</option>
+                            <option value="street">Street</option>
+                            <option value="nature">Nature</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Photo URL</label>
+                        <input type="text" id="photoUrl" placeholder="Enter photo URL">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Thumbnail URL (optional)</label>
+                    <input type="text" id="thumbnailUrl" placeholder="Enter thumbnail URL (or leave blank to use photo URL)">
+                </div>
+                <button class="btn btn-success" onclick="addManualPhoto()">Add Photo</button>
+            </div>
+        </div>
+
+        <!-- Current Photos Section -->
+        <div class="section">
+            <h2>Current Photos</h2>
+            <button class="btn btn-danger" onclick="clearAllPhotos()" style="margin-bottom: 1rem;">Clear All Photos</button>
+            <div id="photoList" class="photo-list"></div>
+        </div>
+    </div>
+
+    <script src="lightroom-api.js"></script>
+    <script>
+        // Load and display current photos
+        function loadCurrentPhotos() {
+            const photos = JSON.parse(localStorage.getItem('portfolioPhotos') || '[]');
+            const photoList = document.getElementById('photoList');
+            const totalPhotos = document.getElementById('totalPhotos');
+
+            totalPhotos.textContent = photos.length;
+
+            if (photos.length === 0) {
+                photoList.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #999;">No photos uploaded yet</p>';
+                return;
+            }
+
+            photoList.innerHTML = photos.map((photo, index) => `
+                <div class="photo-item">
+                    <button class="delete-btn" onclick="deletePhoto(${index})">×</button>
+                    <img src="${photo.thumbnail || photo.url}" alt="${photo.title}">
+                    <div class="photo-item-info">
+                        <div class="photo-item-title">${photo.title}</div>
+                        <div class="photo-item-category">${photo.category}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Add manual photo
+        function addManualPhoto() {
+            const title = document.getElementById('photoTitle').value;
+            const category = document.getElementById('photoCategory').value;
+            const url = document.getElementById('photoUrl').value;
+            const thumbnail = document.getElementById('thumbnailUrl').value;
+
+            if (!title || !url) {
+                showStatus('uploadStatus', 'Please fill in title and photo URL', 'error');
+                return;
+            }
+
+            const photos = JSON.parse(localStorage.getItem('portfolioPhotos') || '[]');
+            const newPhoto = {
+                id: Date.now(),
+                title,
+                category,
+                url,
+                thumbnail: thumbnail || url
+            };
+
+            photos.push(newPhoto);
+            localStorage.setItem('portfolioPhotos', JSON.stringify(photos));
+
+            // Clear form
+            document.getElementById('photoTitle').value = '';
+            document.getElementById('photoUrl').value = '';
+            document.getElementById('thumbnailUrl').value = '';
+
+            showStatus('uploadStatus', 'Photo added successfully!', 'success');
+            loadCurrentPhotos();
+        }
+
+        // Delete photo
+        function deletePhoto(index) {
+            if (!confirm('Are you sure you want to delete this photo?')) {
+                return;
+            }
+
+            const photos = JSON.parse(localStorage.getItem('portfolioPhotos') || '[]');
+            photos.splice(index, 1);
+            localStorage.setItem('portfolioPhotos', JSON.stringify(photos));
+            loadCurrentPhotos();
+        }
+
+        // Clear all photos
+        function clearAllPhotos() {
+            if (!confirm('Are you sure you want to delete ALL photos? This cannot be undone!')) {
+                return;
+            }
+
+            localStorage.removeItem('portfolioPhotos');
+            loadCurrentPhotos();
+        }
+
+        // Sync from Lightroom
+        async function syncFromLightroom() {
+            const apiKey = document.getElementById('apiKey').value;
+            const clientId = document.getElementById('clientId').value;
+            const clientSecret = document.getElementById('clientSecret').value;
+            const catalogId = document.getElementById('catalogId').value;
+            const albumId = document.getElementById('albumId').value;
+
+            if (!apiKey || !clientId || !clientSecret || !catalogId || !albumId) {
+                showStatus('lightroomStatus', 'Please fill in all Lightroom credentials', 'error');
+                return;
+            }
+
+            try {
+                showStatus('lightroomStatus', 'Syncing photos from Lightroom...', 'success');
+
+                // Initialize Lightroom API
+                const api = window.initializeLightroomAPI(apiKey, clientId, clientSecret);
+
+                // Sync photos
+                const photos = await api.syncPhotosToPortfolio(catalogId, albumId);
+
+                showStatus('lightroomStatus', `Successfully synced ${photos.length} photos from Lightroom!`, 'success');
+                loadCurrentPhotos();
+            } catch (error) {
+                console.error('Sync error:', error);
+                showStatus('lightroomStatus', `Error syncing photos: ${error.message}`, 'error');
+            }
+        }
+
+        // Show status message
+        function showStatus(elementId, message, type) {
+            const statusEl = document.getElementById(elementId);
+            statusEl.textContent = message;
+            statusEl.className = `status-message ${type}`;
+
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusEl.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // Initialize
+        loadCurrentPhotos();
+    </script>
+</body>
+</html>
