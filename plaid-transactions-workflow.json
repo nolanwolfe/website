@@ -21,44 +21,34 @@
         300
       ],
       "notesInFlow": true,
-      "notes": "Runs daily at midnight to fetch yesterday's transactions"
+      "notes": "Runs daily at midnight to fetch new transactions"
     },
     {
       "parameters": {
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "plaidApi",
         "method": "POST",
-        "url": "https://{{ $credentials.environment === 'sandbox' ? 'sandbox' : $credentials.environment === 'development' ? 'development' : 'production' }}.plaid.com/transactions/sync",
+        "url": "=https://{{ $env.PLAID_ENVIRONMENT || 'sandbox' }}.plaid.com/transactions/sync",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Content-Type",
               "value": "application/json"
+            },
+            {
+              "name": "PLAID-CLIENT-ID",
+              "value": "={{ $env.PLAID_CLIENT_ID }}"
+            },
+            {
+              "name": "PLAID-SECRET",
+              "value": "={{ $env.PLAID_SECRET }}"
             }
           ]
         },
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "client_id",
-              "value": "={{ $credentials.clientId }}"
-            },
-            {
-              "name": "secret",
-              "value": "={{ $credentials.secret }}"
-            },
-            {
-              "name": "access_token",
-              "value": "={{ $credentials.accessToken }}"
-            },
-            {
-              "name": "count",
-              "value": "500"
-            }
-          ]
-        },
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"access_token\": \"{{ $env.PLAID_ACCESS_TOKEN }}\",\n  \"cursor\": \"\",\n  \"count\": 500\n}",
         "options": {}
       },
       "id": "a3d4e5f6-8b9c-4d1e-2f3a-4b5c6d7e8f9a",
@@ -74,14 +64,48 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extract and format transaction data from Plaid response\nconst items = [];\n\nif ($input.item.json.added && $input.item.json.added.length > 0) {\n  for (const transaction of $input.item.json.added) {\n    items.push({\n      date: transaction.date,\n      description: transaction.name,\n      merchant: transaction.merchant_name || transaction.name,\n      amount: transaction.amount,\n      category: transaction.category ? transaction.category.join(' > ') : 'Uncategorized',\n      account_id: transaction.account_id,\n      transaction_id: transaction.transaction_id,\n      pending: transaction.pending,\n      payment_channel: transaction.payment_channel,\n      iso_currency_code: transaction.iso_currency_code || 'USD'\n    });\n  }\n}\n\nif ($input.item.json.modified && $input.item.json.modified.length > 0) {\n  for (const transaction of $input.item.json.modified) {\n    items.push({\n      date: transaction.date,\n      description: transaction.name,\n      merchant: transaction.merchant_name || transaction.name,\n      amount: transaction.amount,\n      category: transaction.category ? transaction.category.join(' > ') : 'Uncategorized',\n      account_id: transaction.account_id,\n      transaction_id: transaction.transaction_id,\n      pending: transaction.pending,\n      payment_channel: transaction.payment_channel,\n      iso_currency_code: transaction.iso_currency_code || 'USD',\n      modified: true\n    });\n  }\n}\n\nreturn items;"
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+              "leftValue": "={{ $json.added && $json.added.length > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "d6e7f8a9-1b2c-4d3e-5f6a-7b8c9d0e1f2a",
+      "name": "Check for New Transactions",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        690,
+        300
+      ],
+      "notesInFlow": true,
+      "notes": "Only proceed if there are new or modified transactions"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and format transaction data from Plaid response\nconst items = [];\n\n// Process added transactions\nif ($input.item.json.added && $input.item.json.added.length > 0) {\n  for (const transaction of $input.item.json.added) {\n    items.push({\n      json: {\n        date: transaction.date,\n        description: transaction.name,\n        merchant: transaction.merchant_name || transaction.name,\n        amount: transaction.amount,\n        category: transaction.category ? transaction.category.join(' > ') : 'Uncategorized',\n        account_id: transaction.account_id,\n        transaction_id: transaction.transaction_id,\n        pending: transaction.pending ? 'Yes' : 'No',\n        payment_channel: transaction.payment_channel || 'N/A',\n        currency: transaction.iso_currency_code || 'USD',\n        status: 'Added'\n      }\n    });\n  }\n}\n\n// Process modified transactions\nif ($input.item.json.modified && $input.item.json.modified.length > 0) {\n  for (const transaction of $input.item.json.modified) {\n    items.push({\n      json: {\n        date: transaction.date,\n        description: transaction.name,\n        merchant: transaction.merchant_name || transaction.name,\n        amount: transaction.amount,\n        category: transaction.category ? transaction.category.join(' > ') : 'Uncategorized',\n        account_id: transaction.account_id,\n        transaction_id: transaction.transaction_id,\n        pending: transaction.pending ? 'Yes' : 'No',\n        payment_channel: transaction.payment_channel || 'N/A',\n        currency: transaction.iso_currency_code || 'USD',\n        status: 'Modified'\n      }\n    });\n  }\n}\n\nreturn items;"
       },
       "id": "b4c5d6e7-9a0b-4c1d-3e4f-5a6b7c8d9e0f",
       "name": "Format Transaction Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        690,
+        910,
         300
       ],
       "notesInFlow": true,
@@ -89,7 +113,7 @@
     },
     {
       "parameters": {
-        "operation": "appendOrUpdate",
+        "operation": "append",
         "documentId": {
           "__rl": true,
           "value": "={{ $env.GOOGLE_SHEET_ID }}",
@@ -97,7 +121,7 @@
         },
         "sheetName": {
           "__rl": true,
-          "value": "Transactions",
+          "value": "={{ $env.GOOGLE_SHEET_TAB_NAME || 'Transactions' }}",
           "mode": "name"
         },
         "columns": {
@@ -112,12 +136,12 @@
             "transaction_id": "={{ $json.transaction_id }}",
             "pending": "={{ $json.pending }}",
             "payment_channel": "={{ $json.payment_channel }}",
-            "currency": "={{ $json.iso_currency_code }}"
+            "currency": "={{ $json.currency }}",
+            "status": "={{ $json.status }}"
           }
         },
         "options": {
-          "cellFormat": "USER_ENTERED",
-          "useAppend": false
+          "cellFormat": "USER_ENTERED"
         }
       },
       "id": "c5d6e7f8-0a1b-4c2d-4e5f-6a7b8c9d0e1f",
@@ -125,7 +149,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.4,
       "position": [
-        910,
+        1130,
         300
       ],
       "credentials": {
@@ -136,55 +160,6 @@
       },
       "notesInFlow": true,
       "notes": "Appends formatted transactions to Google Sheets"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
-              "leftValue": "={{ $json.added?.length || 0 }}",
-              "rightValue": 0,
-              "operator": {
-                "type": "number",
-                "operation": "gt"
-              }
-            }
-          ],
-          "combinator": "or"
-        },
-        "options": {}
-      },
-      "id": "d6e7f8a9-1b2c-4d3e-5f6a-7b8c9d0e1f2a",
-      "name": "Check for New Transactions",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        690,
-        480
-      ],
-      "notesInFlow": true,
-      "notes": "Only proceed if there are new transactions"
-    },
-    {
-      "parameters": {
-        "mode": "combine",
-        "combinationMode": "multiplex",
-        "options": {}
-      },
-      "id": "e7f8a9b0-2c3d-4e5f-6a7b-8c9d0e1f2a3b",
-      "name": "Merge Data",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3,
-      "position": [
-        470,
-        480
-      ]
     }
   ],
   "pinData": {},
@@ -204,33 +179,6 @@
       "main": [
         [
           {
-            "node": "Format Transaction Data",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Merge Data",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Transaction Data": {
-      "main": [
-        [
-          {
-            "node": "Add to Google Sheets",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Merge Data": {
-      "main": [
-        [
-          {
             "node": "Check for New Transactions",
             "type": "main",
             "index": 0
@@ -243,6 +191,17 @@
         [
           {
             "node": "Format Transaction Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Transaction Data": {
+      "main": [
+        [
+          {
+            "node": "Add to Google Sheets",
             "type": "main",
             "index": 0
           }

@@ -52,7 +52,7 @@ See `get-plaid-token.html` in this repository - open it in a browser to link you
 ### 2.2 Add Headers (Optional but recommended)
 Add these headers to the first row:
 ```
-Date | Description | Merchant | Amount | Category | Account ID | Transaction ID | Pending | Payment Channel | Currency
+Date | Description | Merchant | Amount | Category | Account ID | Transaction ID | Pending | Payment Channel | Currency | Status
 ```
 
 ### 2.3 Get Sheet ID
@@ -74,17 +74,7 @@ Date | Description | Merchant | Amount | Category | Account ID | Transaction ID 
 3. Follow the OAuth flow to connect your Google account
 4. Authorize n8n to access Google Sheets
 
-### 3.3 Set Up Plaid Credentials
-
-#### Create Custom Plaid Credential (HTTP Request Method)
-Since n8n doesn't have a built-in Plaid node, we use HTTP Request:
-
-1. Click on the "Get Plaid Transactions" node
-2. In **Authentication**, select **Predefined Credential Type**
-3. Select **Generic Credential Type** > **HTTP Request**
-4. Or configure directly in the node with your credentials
-
-### 3.4 Configure Environment Variables
+### 3.3 Configure Environment Variables
 
 In n8n, set these environment variables:
 
@@ -110,11 +100,11 @@ environment:
 **For n8n Cloud:**
 Go to Settings > Environment Variables and add them there.
 
-### 3.5 Update Workflow Configuration
-
-Edit the "Get Plaid Transactions" node:
-1. Replace credential placeholders with your actual values
-2. Update the `access_token` parameter with your Plaid access token
+**Important Notes:**
+- The workflow uses HTTP header authentication for Plaid API
+- All credentials are passed via environment variables
+- No need to manually configure credentials in individual nodes
+- Make sure to restart n8n after adding environment variables
 
 ## Step 4: Test the Workflow
 
@@ -153,9 +143,10 @@ Once tested successfully:
 - **Category**: Plaid-assigned category
 - **Account ID**: Plaid account identifier
 - **Transaction ID**: Unique transaction ID
-- **Pending**: Whether transaction is pending
+- **Pending**: Whether transaction is pending (Yes/No)
 - **Payment Channel**: How payment was made
 - **Currency**: ISO currency code
+- **Status**: Whether transaction was "Added" or "Modified"
 
 ### Automation
 - Scheduled daily sync

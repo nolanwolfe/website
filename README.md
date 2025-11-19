@@ -21,6 +21,7 @@ An automated n8n workflow that syncs your bank transactions from Plaid API direc
 - Payment channel (online, in-store, etc.)
 - Pending status
 - Unique transaction ID (prevents duplicates)
+- Status (Added/Modified)
 
 ### Automation Features
 - Scheduled daily sync (customizable)
@@ -107,9 +108,9 @@ Change in the "Schedule Trigger" node:
 
 ## 📊 Sample Google Sheets Format
 
-| Date | Description | Merchant | Amount | Category | Account ID | Transaction ID | Pending | Payment Channel | Currency |
-|------|-------------|----------|--------|----------|------------|----------------|---------|-----------------|----------|
-| 2024-01-15 | Coffee Shop | Starbucks | 5.25 | Food & Drink > Restaurants | acc_123 | txn_456 | FALSE | in store | USD |
+| Date | Description | Merchant | Amount | Category | Account ID | Transaction ID | Pending | Payment Channel | Currency | Status |
+|------|-------------|----------|--------|----------|------------|----------------|---------|-----------------|----------|--------|
+| 2024-01-15 | Coffee Shop | Starbucks | 5.25 | Food & Drink > Restaurants | acc_123 | txn_456 | No | in store | USD | Added |
 
 ## 🛠️ Troubleshooting
 
