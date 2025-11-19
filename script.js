@@ -116,6 +116,23 @@ function loadPhotos() {
     renderGallery(filteredPhotos);
 }
 
+// Helper function to escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Helper function to validate URL
+function isValidUrl(string) {
+    try {
+        const url = new URL(string);
+        return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch (_) {
+        return false;
+    }
+}
+
 // Render gallery
 function renderGallery(photos) {
     const galleryGrid = document.getElementById('galleryGrid');
@@ -125,15 +142,22 @@ function renderGallery(photos) {
         return;
     }
 
-    galleryGrid.innerHTML = photos.map((photo, index) => `
-        <div class="gallery-item" data-category="${photo.category}" data-index="${index}">
-            <img src="${photo.thumbnail || photo.url}" alt="${photo.title}" loading="lazy">
-            <div class="gallery-item-overlay">
-                <div class="gallery-item-title">${photo.title}</div>
-                <div class="gallery-item-category">${photo.category}</div>
+    galleryGrid.innerHTML = photos.map((photo, index) => {
+        const safeTitle = escapeHtml(photo.title || 'Untitled');
+        const safeCategory = escapeHtml(photo.category || 'uncategorized');
+        const safeUrl = isValidUrl(photo.url) ? photo.url : 'https://via.placeholder.com/400';
+        const safeThumbnail = isValidUrl(photo.thumbnail || photo.url) ? (photo.thumbnail || photo.url) : 'https://via.placeholder.com/400';
+
+        return `
+            <div class="gallery-item" data-category="${safeCategory}" data-index="${index}">
+                <img src="${safeThumbnail}" alt="${safeTitle}" loading="lazy" onerror="this.src='https://via.placeholder.com/400'">
+                <div class="gallery-item-overlay">
+                    <div class="gallery-item-title">${safeTitle}</div>
+                    <div class="gallery-item-category">${safeCategory}</div>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 
     // Add click events to gallery items
     document.querySelectorAll('.gallery-item').forEach(item => {
@@ -181,8 +205,12 @@ function openLightbox(index) {
 
 function updateLightboxImage() {
     const photo = filteredPhotos[currentLightboxIndex];
-    lightboxImg.src = photo.url;
-    lightboxCaption.textContent = photo.title;
+    if (photo) {
+        const safeUrl = isValidUrl(photo.url) ? photo.url : 'https://via.placeholder.com/800';
+        lightboxImg.src = safeUrl;
+        lightboxCaption.textContent = photo.title || 'Untitled';
+        lightboxImg.alt = photo.title || 'Photo';
+    }
 }
 
 closeLightbox.addEventListener('click', () => {
