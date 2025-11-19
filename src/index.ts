@@ -38,6 +38,12 @@ app.post('/webhook/whatsapp', async (req: Request, res: Response) => {
   try {
     const { From, Body } = req.body;
 
+    // Validate payload
+    if (!From || Body === undefined || Body === null) {
+      console.log('Invalid webhook payload: missing From or Body');
+      return res.sendStatus(400);
+    }
+
     console.log(`Received message from ${From}: ${Body}`);
 
     // Security: Only respond to authorized number
@@ -50,7 +56,9 @@ app.post('/webhook/whatsapp', async (req: Request, res: Response) => {
     res.sendStatus(200);
 
     // Process message asynchronously
-    processMessage(From, Body);
+    processMessage(From, Body).catch(err => {
+      console.error('Error in async message processing:', err);
+    });
   } catch (error) {
     console.error('Error in webhook:', error);
     res.sendStatus(500);
@@ -59,23 +67,33 @@ app.post('/webhook/whatsapp', async (req: Request, res: Response) => {
 
 async function processMessage(from: string, message: string): Promise<void> {
   try {
+    // Trim and validate message
+    const trimmedMessage = message.trim();
+    if (!trimmedMessage) {
+      return; // Ignore empty messages
+    }
+
     // Check for special commands
-    if (message.toLowerCase().startsWith('/memory')) {
-      await handleMemoryCommand(from, message);
+    if (trimmedMessage.toLowerCase().startsWith('/memory')) {
+      await handleMemoryCommand(from, trimmedMessage);
       return;
     }
 
     // Get response from Claude
-    const response = await claudeService.chat(message);
+    const response = await claudeService.chat(trimmedMessage);
 
     // Send response via WhatsApp
     await whatsappService.sendMessage(from, response);
   } catch (error) {
     console.error('Error processing message:', error);
-    await whatsappService.sendMessage(
-      from,
-      'Sorry, I encountered an error processing your message. Please try again.'
-    );
+    try {
+      await whatsappService.sendMessage(
+        from,
+        'Sorry, I encountered an error processing your message. Please try again.'
+      );
+    } catch (sendError) {
+      console.error('Failed to send error message:', sendError);
+    }
   }
 }
 

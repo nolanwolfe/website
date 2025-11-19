@@ -127,8 +127,20 @@ Only extract factual information about the user, not general conversation or que
         ? response.content[0].text
         : '[]';
 
+      // Extract JSON from the response (handle markdown code blocks)
+      let jsonText = extractedText.trim();
+      const jsonMatch = jsonText.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
+      if (jsonMatch) {
+        jsonText = jsonMatch[1];
+      } else if (jsonText.includes('[') && jsonText.includes(']')) {
+        // Try to extract JSON array if not in code block
+        const startIdx = jsonText.indexOf('[');
+        const endIdx = jsonText.lastIndexOf(']') + 1;
+        jsonText = jsonText.substring(startIdx, endIdx);
+      }
+
       // Parse and store memories
-      const memories = JSON.parse(extractedText.trim());
+      const memories = JSON.parse(jsonText);
       if (Array.isArray(memories) && memories.length > 0) {
         for (const memory of memories) {
           if (memory.category && memory.content) {
